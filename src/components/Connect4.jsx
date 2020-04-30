@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import classnames from 'classnames'
 import { Connect4 as Connect4Core } from '../lib/Connect4'
 
@@ -13,48 +13,67 @@ function Connect4({
 } = defaultProps) {
 
   const [game, setGame] = useState(new Connect4Core(cols, rows))
+  const [, setTurn] = useState(game.turn)
   const [highlightedColumn, setHighlightedColumn] = useState(null)
   const [touchEnabled, setTouchEnabled] = useState(false)
+  const [gameover,setGameover] = useState(!!game.winner)
 
-  const gameIsWon = !!game.winner
-  const { freeIndexPerColumn } = game
+  const makeMove = (columnIndex) => {
+    game.makeMove(columnIndex)
+    setGameover(!!game.winner)
+    setTurn(game.turn) // force rerender
+  }
 
   const handleColumnTouchend = (columnIndex) => {
     setTouchEnabled(true)
 
-    if (gameIsWon || freeIndexPerColumn[columnIndex] === -1) {
+    if (gameover || game.freeIndexPerColumn[columnIndex] === -1) {
       return
     }
 
     if (highlightedColumn !== columnIndex) {
       setHighlightedColumn(columnIndex)
     } else {
-      game.makeMove(columnIndex)
       setHighlightedColumn(null)
+      makeMove(columnIndex)
     }
 
   }
   const handleColumnClick = (columnIndex) => {
     setTouchEnabled(false)
 
-    if (gameIsWon || freeIndexPerColumn[columnIndex] === -1) return
+    if (gameover || game.freeIndexPerColumn[columnIndex] === -1) return
 
     if (touchEnabled) {
       setTouchEnabled(false)
     } else {
-      game.makeMove(columnIndex)
+      makeMove(columnIndex)
     }
+  }
+
+  const startGame = () => {
+    setGame(new Connect4Core(cols, rows))
+    setGameover(false)
+    setTurn(0)
   }
 
   return (
     <div
-      className={gameClasses(gameIsWon)}>
+      className={gameClasses(gameover)}>
       <Board
         game={game}
         highlightedColumn={highlightedColumn}
         handleColumnTouchend={handleColumnTouchend}
         handleColumnClick={handleColumnClick}
       />
+      {
+        gameover ?
+          <Win
+            game={game}
+            startGame={startGame}
+            /> :
+          null
+      }
     </div>
   )
 }
@@ -90,6 +109,18 @@ function Board({ game, highlightedColumn, handleColumnTouchend, handleColumnClic
         ))
       }
     </div>
+  )
+}
+
+function Win({game,startGame}) {
+  const {turn} = game
+  const turnName = turn === 1 ? 'Red' : 'Yellow'
+
+  return (
+    <div className="won">
+      <p>{turnName} wins!</p>
+      <button className="startgame" onClick={startGame}>Play again</button>
+    </div >
   )
 }
 
