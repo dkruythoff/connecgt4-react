@@ -112,18 +112,24 @@ function getWinner(arrays, board, turn) {
   return winner
 }
 
+function getFreeIndexPerColumn(board) {
+  return board.map(col => col.findIndex(cell => cell === null))
+}
+
 export class Connect4 {
   constructor(cols = 7, rows = 6) {
     this.board = new Array(cols).fill(null).map(() => new Array(rows).fill(null))
-    this.freeIndexPerColumn = this.board.map(col => col.findIndex(cell => cell === null))
+    this.freeIndexPerColumn = getFreeIndexPerColumn(this.board)
     this.arrays = getArrays(this.board)
     this.turn = 1
     this.winner = false
   }
   makeMove(col) {
-    const colFreeIndex = this.board[col].findIndex(cell => cell === null)
+    const colFreeIndex = this.freeIndexPerColumn[col]
+
     if (colFreeIndex > -1) {
       this.board[col][colFreeIndex] = this.turn
+      this.freeIndexPerColumn = getFreeIndexPerColumn(this.board)
       this.winner = getWinner(this.arrays, this.board, this.turn)
       if (!this.winner) {
         this.turn = this.turn === 1 ? 2 : 1
