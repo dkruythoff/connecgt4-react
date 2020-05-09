@@ -1,3 +1,5 @@
+import { getLines } from './lines'
+
 function checkLine(line) {
   return /([12]),\1,\1,\1/.test(line.toString())
 }
@@ -16,9 +18,11 @@ function getWinningCoordinates(coordinates, values, turn) {
   return winningCoordinates
 }
 
-export function getWinner(arrays, board, turn) {
+export function getWinner(board, turn) {
+  const lines = getLines(board)
   let winner = false
-  arrays.some((array) => {
+
+  lines.some((array) => {
     const { coordinates } = array
     const values = coordinates.map(([x, y]) => board[x][y])
     if (checkLine(values)) {
