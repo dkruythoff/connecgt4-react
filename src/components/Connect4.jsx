@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import classnames from 'classnames'
-import { Connect4 as Connect4Core } from '../lib/Connect4'
+import { play } from 'connect4-core'
 
 const defaultProps = {
   cols: 7,
@@ -12,22 +12,24 @@ function Connect4({
   rows = defaultProps.rows
 } = defaultProps) {
 
-  const [game, setGame] = useState(new Connect4Core(cols, rows))
-  const [, setTurn] = useState(game.turn)
+  const [gameState, setGameState] = useState(play({ cols, rows }))
+  // useReducer(gameStateReducer, play({ cols, rows }))
   const [highlightedColumn, setHighlightedColumn] = useState(null)
   const [touchEnabled, setTouchEnabled] = useState(false)
-  const [gameover,setGameover] = useState(!!game.winner)
 
   const makeMove = (columnIndex) => {
-    game.makeMove(columnIndex)
-    setGameover(!!game.winner)
-    setTurn(game.turn) // force rerender
+    setGameState(play(gameState, columnIndex))
+    // dispatch({type: 'makeMove', columnIndex })
+  }
+
+  const columnIsPlayable = (columnIndex) => {
+    return !(gameState.gameover || !gameState.columnsPlayable[columnIndex])
   }
 
   const handleColumnTouchend = (columnIndex) => {
     setTouchEnabled(true)
 
-    if (gameover || game.freeIndexPerColumn[columnIndex] === -1) {
+    if (!columnIsPlayable(columnIndex)) {
       return
     }
 
@@ -40,9 +42,12 @@ function Connect4({
 
   }
   const handleColumnClick = (columnIndex) => {
-    setTouchEnabled(false)
+    if(touchEnabled) {
+      setTouchEnabled(false)
+      return
+    }
 
-    if (gameover || game.freeIndexPerColumn[columnIndex] === -1) return
+    if (!columnIsPlayable(columnIndex)) return
 
     if (touchEnabled) {
       setTouchEnabled(false)
@@ -52,24 +57,23 @@ function Connect4({
   }
 
   const startGame = () => {
-    setGame(new Connect4Core(cols, rows))
-    setGameover(false)
-    setTurn(0)
+    setGameState(play({cols,rows}))
+    // dispatch({type: 'reset'})
   }
 
   return (
     <div
-      className={gameClasses(gameover)}>
+      className={gameClasses(gameState.gameover)}>
       <Board
-        game={game}
+        gameState={gameState}
         highlightedColumn={highlightedColumn}
         handleColumnTouchend={handleColumnTouchend}
         handleColumnClick={handleColumnClick}
       />
       {
-        gameover ?
+        gameState.gameover ?
           <Win
-            game={game}
+            gameState={gameState}
             startGame={startGame}
             /> :
           null
@@ -78,42 +82,81 @@ function Connect4({
   )
 }
 
-function Board({ game, highlightedColumn, handleColumnTouchend, handleColumnClick }) {
-  const { board, turn, freeIndexPerColumn, winner } = game
-  const gameIsWon = !!winner
+function Board({ gameState, highlightedColumn, handleColumnTouchend, handleColumnClick }) {
+  const { board, turn, gameover } = gameState
 
   return (
-    <div className={boardClasses(gameIsWon, turn)}>
+    <div className={boardClasses(gameover, turn)}>
       {
         board.map((column, columnIndex) => (
-          <div
-            className={columnClasses(columnIndex, freeIndexPerColumn, highlightedColumn)}
+          <BoardColumn
             key={`board-column-${columnIndex}`}
-            onTouchEnd={() => handleColumnTouchend(columnIndex)}
-            onClick={() => handleColumnClick(columnIndex)}
+            column={column}
+            columnIndex={columnIndex}
+            gameState={gameState}
+            handleColumnTouchend={handleColumnTouchend}
+            handleColumnClick={handleColumnClick}
+            highlightedColumn={highlightedColumn}
           >
             {
               column.map((cell, cellIndex) => (
-                <div
-                  className={cellClasses(cell)}
+                <BoardCell
                   key={`board-column-${columnIndex}-cell-${cellIndex}`}
-                  >
-                  <span className={pieceClasses(cell)}>&nbsp;</span>
-                </div>
+                  cell={cell}
+                  cellIndex={cellIndex}
+                  columnIndex={columnIndex}
+                />
               ))
             }
-            <div className="cell cell--preview">
-              <span className={pieceClasses(turn)}>&nbsp;</span>
-            </div>
-          </div>
+          </BoardColumn>
         ))
       }
     </div>
   )
 }
 
-function Win({game,startGame}) {
-  const {turn} = game
+function BoardColumn({
+  children,
+  columnIndex,
+  gameState,
+  handleColumnTouchend,
+  handleColumnClick,
+  highlightedColumn
+}) {
+  const { columnsPlayable, turn } = gameState
+
+  return (
+    <div
+      className={columnClasses(columnIndex, columnsPlayable, highlightedColumn)}
+      key={`board-column-${columnIndex}`}
+      onTouchEnd={() => handleColumnTouchend(columnIndex)}
+      onClick={() => handleColumnClick(columnIndex)}
+    >
+      { children }
+      <div className="cell cell--preview">
+        <span className={pieceClasses(turn)}>&nbsp;</span>
+      </div>
+    </div>
+  )
+}
+
+function BoardCell({
+  cell,
+  cellIndex,
+  columnIndex
+}) {
+  return (
+    <div
+      className={cellClasses(cell.value)}
+      key={`board-column-${columnIndex}-cell-${cellIndex}`}
+    >
+      <span className={pieceClasses(cell.value)}>&nbsp;</span>
+    </div>
+  )
+}
+
+function Win({gameState,startGame}) {
+  const {turn} = gameState
   const turnName = turn === 1 ? 'Red' : 'Yellow'
 
   return (
