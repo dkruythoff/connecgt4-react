@@ -13,13 +13,11 @@ function Connect4({
 } = defaultProps) {
 
   const [gameState, setGameState] = useState(play({ cols, rows }))
-  // useReducer(gameStateReducer, play({ cols, rows }))
   const [highlightedColumn, setHighlightedColumn] = useState(null)
   const [touchEnabled, setTouchEnabled] = useState(false)
 
   const makeMove = (columnIndex) => {
     setGameState(play(gameState, columnIndex))
-    // dispatch({type: 'makeMove', columnIndex })
   }
 
   const columnIsPlayable = (columnIndex) => {
@@ -47,13 +45,11 @@ function Connect4({
       return
     }
 
-    if (!columnIsPlayable(columnIndex)) return
-
-    if (touchEnabled) {
-      setTouchEnabled(false)
-    } else {
-      makeMove(columnIndex)
+    if (!columnIsPlayable(columnIndex)) {
+      return
     }
+
+    makeMove(columnIndex)
   }
 
   const startGame = () => {
